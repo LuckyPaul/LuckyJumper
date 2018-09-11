@@ -1,0 +1,37 @@
+﻿/***
+ * 
+ *    Title: #ProjectName#
+ *           主题：       
+ *    Description: 
+ *           功能： 
+ *                  
+ *    Date: #CreateTime#
+ *    Version: 0.1版本
+ *    Modify Recoder: 
+ *    Author: #Author#
+ *   
+ */
+
+ local transform;
+ local gameObject;
+
+ #SCRIPTNAME# = {}
+ local this = #SCRIPTNAME#
+
+ function #SCRIPTNAME#.Awake(obj)
+
+ end
+
+  function #SCRIPTNAME#.Start()
+
+ end
+
+  function #SCRIPTNAME#.InitPanel()
+
+ end
+
+  function #SCRIPTNAME#.OnDestory()
+
+ end
+
+
