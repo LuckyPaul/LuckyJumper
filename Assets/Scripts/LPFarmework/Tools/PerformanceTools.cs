@@ -15,12 +15,18 @@
 using UnityEngine;
 
 namespace LuckyPual.Tools {
-	public class PerformanceTools : UnitySingleton<PerformanceTools> 
+	public class PerformanceTools : UnitySingleton<PerformanceTools>
 	{
         private bool IsShowFPS = false;
         private bool IsShowDrawCall = false;
         private bool IsShowVerts = false;
         private bool IsShowMeshs = false;
+
+
+        public float f_UpdateInterval = 0.5F;  //刷新间隔
+        private float f_LastInterval;      //上一次刷新的时间间隔
+        public static int verts;
+        public static int tris;
 
         /// <summary>
         /// FPS
@@ -59,13 +65,47 @@ namespace LuckyPual.Tools {
         }
 
 
+        private void Start()
+        {
+            f_LastInterval = Time.realtimeSinceStartup;
+        }
 
 
+        /// <summary>
+        /// 得到场景中所有的GameObject
+        /// </summary>
+        void GetAllObjects()
+        {
+            verts = 0;
+            tris = 0;
+            GameObject[] ob = FindObjectsOfType(typeof(GameObject)) as GameObject[];
+            foreach (GameObject obj in ob)
+            {
+                GetAllVertsAndTris(obj);
+            }
+        }
+        //得到三角面和顶点数
+        void GetAllVertsAndTris(GameObject obj)
+        {
+            Component[] filters;
+            filters = obj.GetComponentsInChildren<MeshFilter>();
+            foreach (MeshFilter f in filters)
+            {
+                tris += f.sharedMesh.triangles.Length / 3;
+                verts += f.sharedMesh.vertexCount;
+            }
+        }
 
 
+        void Update()
+        {
 
-
-
+            if (Time.realtimeSinceStartup > f_LastInterval + f_UpdateInterval)
+            {
+                f_LastInterval = Time.realtimeSinceStartup;
+                GetAllObjects();
+            }
+        }
 
 
 
