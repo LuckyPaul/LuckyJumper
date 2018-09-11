@@ -17,7 +17,7 @@ using UnityEngine;
 namespace LuckyPual.Tools {
 	public class FPSTools : GlobeSingleton<FPSTools> 
 	{
-
+       
 
 
 
