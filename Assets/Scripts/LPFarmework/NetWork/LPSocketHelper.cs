@@ -22,14 +22,16 @@ using System;
 
 namespace LuckyPual.Net
 {
-    public class LPSocketHelper:Singleton<LPSocketHelper>
+    public class LPSocketHelper : Singleton<LPSocketHelper>
     {
-        public ProtocolType protocolType= ProtocolType.Tcp;
+        public ProtocolType protocolType = ProtocolType.Tcp;
         private Socket socket;
         public delegate void ConnectCallback();
 
         ConnectCallback connectSuccessedDelegate = null;
         ConnectCallback connectFailedDelegate = null;
+
+        public event EventHandler DealMessageHandler;   //解析数据句柄
 
         private bool isStopReceive = true;
 
@@ -40,7 +42,7 @@ namespace LuckyPual.Net
         /// <see cref="Socket.Connected"/>
         public bool Connected
         {
-             get { return socket != null && socket.Connected; }
+            get { return socket != null && socket.Connected; }
         }
 
 
@@ -59,7 +61,7 @@ namespace LuckyPual.Net
         /// <param name="_port"></param>
         public void Connect(string _ip, int _port)
         {
-            IAsyncResult result =socket.BeginConnect(_ip, _port, OnConnectedCallBack, this);
+            IAsyncResult result = socket.BeginConnect(_ip, _port, OnConnectedCallBack, this);
 
             bool success = result.AsyncWaitHandle.WaitOne(5000, true);
             if (!success)
@@ -78,7 +80,7 @@ namespace LuckyPual.Net
         /// 连接回调
         /// </summary>
         /// <param name="ar"></param>
-        public void  OnConnectedCallBack(IAsyncResult ar)
+        public void OnConnectedCallBack(IAsyncResult ar)
         {
             if (!socket.Connected)
             {
@@ -138,11 +140,47 @@ namespace LuckyPual.Net
         }
 
 
+        #region 异步接收消息
+
+        private readonly int _decoderLengthFieldLength = 4;
 
         public void AsyReceiveMessage()
         {
+            if (!socket.Connected)
+            {
+                //断开连接  结束线程
+                socket.Close();
+                return;
+            }
+            var buffer = new byte[_decoderLengthFieldLength];
+            socket.BeginReceive(buffer, 0, _decoderLengthFieldLength, SocketFlags.None, OnReceiveFrameLengthComplete, buffer);
+        }
+
+
+        void OnReceiveFrameLengthComplete(IAsyncResult ar)
+        {
+            var frameLength = (byte[])ar.AsyncState;
+            var length = BitConverter.ToInt32(frameLength, 0);
+            var data = new byte[length];
+
+            socket.BeginReceive(data, 0, data.Length, SocketFlags.None, OnReceiveDataComplete, data);
 
         }
+        void OnReceiveDataComplete(IAsyncResult ar)
+        {
+            socket.EndReceive(ar);
+            var data = ar.AsyncState as byte[];
+
+            if (DealMessageHandler != null)
+            {
+                DealMessageHandler(this, new ReceiveMessageCompletedEvent(data));
+            }
+                             
+         
+
+        }
+
+        #endregion
 
 
 
@@ -205,5 +243,23 @@ namespace LuckyPual.Net
 
     }
 
+    /// <summary>
+    /// 消息接收完成事件
+    /// </summary>
+    public class ReceiveMessageCompletedEvent : EventArgs
+    {
+        private readonly object _data;
+
+        public ReceiveMessageCompletedEvent(object data)
+        {
+            _data = data;
+        }
+
+        public object MessageData
+        {
+            get { return _data; }
+        }
+
+    }
 
 }
