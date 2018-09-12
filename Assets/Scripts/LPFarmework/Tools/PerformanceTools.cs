@@ -15,111 +15,197 @@
 using UnityEngine;
 
 namespace LuckyPual.Tools {
-	public class PerformanceTools : UnitySingleton<PerformanceTools>
+	public  class PerformanceTools : UnitySingleton<PerformanceTools>
 	{
-        private bool IsShowFPS = false;
-        private bool IsShowDrawCall = false;
-        private bool IsShowVerts = false;
-        private bool IsShowMeshs = false;
+        private FPSinDicator fPSinDicator;
+        private VertsinDicator vertsinDicator;
+        private TrisDicator trisDicator;
+        private GUIStyle style;
 
-
-        public float f_UpdateInterval = 0.5F;  //刷新间隔
-        private float f_LastInterval;      //上一次刷新的时间间隔
-        public static int verts;
-        public static int tris;
-
-        /// <summary>
-        /// FPS
-        /// </summary>
-        /// <param name="isShow"></param>
-        public void ShowFPS(bool isShow)
+        private bool IsShow = false;
+        private  void Awake()
         {
-            IsShowFPS = isShow;
+            fPSinDicator = new FPSinDicator();
+            vertsinDicator = new VertsinDicator();
+            trisDicator = new TrisDicator();
+
+            //GUI样式设置
+            style = new GUIStyle();
+            style.fontSize = 30;
+            style.normal.textColor = Color.red;
         }
 
-        /// <summary>
-        /// DrawCall
-        /// </summary>
-        /// <param name="isShow"></param>
-        public void ShowDrawCall(bool isShow)
+        private void OnGUI()
         {
-            IsShowDrawCall = isShow;
+            if (!IsShow) return;
+
+            GUI.Label(new Rect(20, Screen.height - 40, 200, 200), "FPS: " + this.fPSinDicator.Info.ToString("f2"), style);
+            GUI.Label(new Rect(20, Screen.height - 80, 200, 200), "FPS: " + this.vertsinDicator.Info.ToString("f2"), style);
+            GUI.Label(new Rect(20, Screen.height - 120, 200, 200), "FPS: " + this.trisDicator.Info.ToString("f2"), style);
+
+
+
         }
 
-        /// <summary>
-        /// Verts
-        /// </summary>
-        /// <param name="isShow"></param>
-        public void ShowVerts(bool isShow)
+        public void OpenPerformanceTools()
         {
-            IsShowVerts = isShow;
+            IsShow = true;
+            fPSinDicator.Show(true);
+            vertsinDicator.Show(true);
+            trisDicator.Show(true);
         }
-
-        /// <summary>
-        /// Meshs
-        /// </summary>
-        /// <param name="isShow"></param>
-        public void ShowMeshs(bool isShow)
-        {
-            IsShowMeshs = isShow;
-        }
-
-
-        private void Start()
-        {
-            f_LastInterval = Time.realtimeSinceStartup;
-        }
-
-
-        /// <summary>
-        /// 得到场景中所有的GameObject
-        /// </summary>
-        void GetAllObjects()
-        {
-            verts = 0;
-            tris = 0;
-            GameObject[] ob = FindObjectsOfType(typeof(GameObject)) as GameObject[];
-            foreach (GameObject obj in ob)
-            {
-                GetAllVertsAndTris(obj);
-            }
-        }
-        //得到三角面和顶点数
-        void GetAllVertsAndTris(GameObject obj)
-        {
-            Component[] filters;
-            filters = obj.GetComponentsInChildren<MeshFilter>();
-            foreach (MeshFilter f in filters)
-            {
-                tris += f.sharedMesh.triangles.Length / 3;
-                verts += f.sharedMesh.vertexCount;
-            }
-        }
-
 
         void Update()
         {
+            if (!IsShow) return;
 
-            if (Time.realtimeSinceStartup > f_LastInterval + f_UpdateInterval)
-            {
-                f_LastInterval = Time.realtimeSinceStartup;
-                GetAllObjects();
-            }
+            fPSinDicator.GetInfo();
+            vertsinDicator.GetInfo();
+            trisDicator.GetInfo();
+        }
+
+    }
+
+    public abstract class DicatorBase : MonoBehaviour
+    {
+        public bool IsShow;
+        public float Info;
+
+
+
+        public DicatorBase()
+        {
+            IsShow = false;
+            Info = 0.0f;
         }
 
 
+        /// <summary>
+        /// 显示信息
+        /// </summary>
+        /// <param name="isShow"></param>
+        public  void Show(bool isShow)
+        {
+            IsShow = isShow;
+        }
 
 
-
-
-
-
-
-
-
-
-
+        public abstract void GetInfo();
 
     }
+
+   /// <summary>
+   /// FPS
+   /// </summary>
+    public class FPSinDicator : DicatorBase
+    {
+        public float fpsMeasuringDelta = 2.0f;
+
+        private float timePassed=0.0f;
+        private int m_FrameCount = 0;
+       
+        public override void GetInfo()
+        {
+            if (!IsShow) return;
+
+            m_FrameCount = m_FrameCount + 1;
+            timePassed = timePassed + Time.deltaTime;
+
+            if (timePassed > fpsMeasuringDelta)
+            {
+                Info = m_FrameCount / timePassed;
+
+                timePassed = 0.0f;
+                m_FrameCount = 0;
+            }
+        }
+
+    }
+
+    /// <summary>
+    /// Verts
+    /// </summary>
+    public class VertsinDicator : DicatorBase
+    {
+        public float fpsMeasuringDelta = 0.5f;
+        private float timePassed = 0.0f;
+
+
+        public VertsinDicator()
+        {
+            IsShow = false;
+            Info = 0.0f;
+            timePassed= Time.realtimeSinceStartup;
+
+        }
+
+        public override void GetInfo()
+        {
+            if (!IsShow) return;
+
+            if (Time.realtimeSinceStartup > fpsMeasuringDelta + timePassed)
+            {
+                Info = 0;
+                timePassed = Time.realtimeSinceStartup;
+                GameObject[] ob = FindObjectsOfType(typeof(GameObject)) as GameObject[];
+                foreach (GameObject obj in ob)
+                {
+                    Component[] filters;
+                    filters = obj.GetComponentsInChildren<MeshFilter>();
+                    foreach (MeshFilter f in filters)
+                    {
+                        // tris += f.sharedMesh.triangles.Length / 3;
+                        Info += f.sharedMesh.vertexCount;
+                    }
+
+                }
+
+            }
+        }
+
+    }
+
+    /// <summary>
+    /// Tris
+    /// </summary>
+    public class TrisDicator : DicatorBase
+    {
+        public float fpsMeasuringDelta = 0.5f;
+        private float timePassed = 0.0f;
+
+
+        public TrisDicator()
+        {
+            IsShow = false;
+            Info = 0.0f;
+            timePassed = Time.realtimeSinceStartup;
+
+        }
+
+        public override void GetInfo()
+        {
+            if (!IsShow) return;
+
+            if (Time.realtimeSinceStartup > fpsMeasuringDelta + timePassed)
+            {
+                Info = 0;
+                timePassed = Time.realtimeSinceStartup;
+                GameObject[] ob = FindObjectsOfType(typeof(GameObject)) as GameObject[];
+                foreach (GameObject obj in ob)
+                {
+                    Component[] filters;
+                    filters = obj.GetComponentsInChildren<MeshFilter>();
+                    foreach (MeshFilter f in filters)
+                    {
+                        Info += f.sharedMesh.triangles.Length / 3;
+                    }
+
+                }
+
+            }
+        }
+
+    }
+
 }
 
