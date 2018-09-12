@@ -117,6 +117,7 @@ namespace LuckyPual.Net
 
                     int i = socket.Receive(bytes);
 
+
                     if (i <= 0)
                     {
                         socket.Close();
